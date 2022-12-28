@@ -402,6 +402,8 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
             j++;
         }
     }
+
+    //Do whichever remap was chosen
     //RemapPassthrough(newReport);
     RemapLegacy(newReport);
 
