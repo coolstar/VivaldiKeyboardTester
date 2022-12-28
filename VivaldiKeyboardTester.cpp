@@ -126,17 +126,11 @@ VivaldiTester::VivaldiTester() {
 void VivaldiTester::updateKey(KeyStruct data) {
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         if (devExt->currentKeys[i].InternalFlags & INTFLAG_REMOVED) {
-            for (int j = 0; j < MAX_CURRENT_KEYS; j++) { //Remove any remaps if the original key is to be removed
-                if (devExt->remappedKeys[j].origKey.MakeCode == devExt->currentKeys[i].MakeCode &&
-                    devExt->remappedKeys[j].origKey.Flags == devExt->currentKeys[i].Flags) {
-                    RtlZeroMemory(&devExt->remappedKeys[j], sizeof(devExt->remappedKeys[0]));
-                }
-            }
-
             RtlZeroMemory(&devExt->currentKeys[i], sizeof(devExt->currentKeys[0])); //Remove any keys marked to be removed
         }
     }
 
+    KeyStruct origData = data;
     //Apply any remaps if they were done
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         if (devExt->remappedKeys[i].origKey.MakeCode == data.MakeCode &&
@@ -152,6 +146,7 @@ void VivaldiTester::updateKey(KeyStruct data) {
     data.Flags = data.Flags & (KEY_E0 | KEY_E1 | KEY_BREAK);
     if (data.Flags & KEY_BREAK) { //remove
         data.Flags = data.Flags & (KEY_E0 | KEY_E1);
+        origData.Flags = origData.Flags & (KEY_E0 | KEY_E1);
         if (devExt->lastKeyPressed.MakeCode == data.MakeCode &&
             devExt->lastKeyPressed.Flags == data.Flags) {
             RtlZeroMemory(&devExt->lastKeyPressed, sizeof(devExt->lastKeyPressed));
@@ -160,6 +155,13 @@ void VivaldiTester::updateKey(KeyStruct data) {
         for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
             if (devExt->currentKeys[i].MakeCode == data.MakeCode &&
                 devExt->currentKeys[i].Flags == data.Flags) {
+                for (int j = 0; j < MAX_CURRENT_KEYS; j++) { //Remove any remaps if the original key is to be removed
+                    if (devExt->remappedKeys[j].origKey.MakeCode == origData.MakeCode &&
+                        devExt->remappedKeys[j].origKey.Flags == origData.Flags) {
+                        RtlZeroMemory(&devExt->remappedKeys[j], sizeof(devExt->remappedKeys[0]));
+                    }
+                }
+
                 devExt->currentKeys[i].InternalFlags |= INTFLAG_REMOVED;
             }
         }
@@ -318,6 +320,7 @@ void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
             remappedStruct.origKey.MakeCode = data[i].MakeCode;
             remappedStruct.origKey.Flags = data[i].Flags;
             remappedStruct.remappedKey.MakeCode = K_DELETE;
+            remappedStruct.remappedKey.Flags = KEY_E0;
 
             if (addRemap(remappedStruct)) {
                 data[i].MakeCode = K_DELETE;
@@ -500,7 +503,7 @@ int main()
     VivaldiTester test;
 
     KEYBOARD_INPUT_DATA testData[2];
-    RtlZeroMemory(testData, sizeof(testData));
+    RtlZeroMemory(testData, sizeof(testData)); //Reset test data
 
     testData[0].MakeCode = K_LCTRL;
     printf("Ctrl\n");
@@ -536,7 +539,8 @@ int main()
     printf("Mute Release\n");
     SubmitKeys_Guarded(&test, testData, 1);
 
-    RtlZeroMemory(testData, sizeof(testData));
+    RtlZeroMemory(testData, sizeof(testData)); //Reset test data
+
     testData[0].MakeCode = 0x1E;
     testData[0].Flags = 0;
     printf("A Press\n");
@@ -578,5 +582,44 @@ int main()
     testData[0].MakeCode = 0x1F;
     testData[0].Flags = KEY_BREAK;
     printf("S Release\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    RtlZeroMemory(testData, sizeof(testData)); //Reset test data
+
+    testData[0].MakeCode = K_LCTRL;
+    printf("Ctrl\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_LALT;
+    printf("Alt\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_BACKSP;
+    printf("Backspace\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_LCTRL;
+    testData[0].Flags = KEY_BREAK;
+    printf("Release Ctrl\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_LALT;
+    testData[0].Flags = KEY_BREAK;
+    printf("Release Alt\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_BACKSP;
+    testData[0].Flags = KEY_BREAK;
+    printf("Release Backspace\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_BACKSP;
+    testData[0].Flags = 0;
+    printf("Backspace\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = K_BACKSP;
+    testData[0].Flags = KEY_BREAK;
+    printf("Release Backspace\n");
     SubmitKeys_Guarded(&test, testData, 1);
 }
