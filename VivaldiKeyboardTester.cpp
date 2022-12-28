@@ -134,19 +134,19 @@ void VivaldiTester::updateKey(KeyStruct data) {
     //Apply any remaps if they were done
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         if (devExt->remappedKeys[i].origKey.MakeCode == data.MakeCode &&
-            devExt->remappedKeys[i].origKey.Flags == (data.Flags & (KEY_E0 | KEY_E1))) {
+            devExt->remappedKeys[i].origKey.Flags == (data.Flags & KEY_TYPES)) {
             data.MakeCode = devExt->remappedKeys[i].remappedKey.MakeCode;
-            data.Flags = devExt->remappedKeys[i].remappedKey.Flags | (data.Flags & ~(KEY_E0 | KEY_E1));
+            data.Flags = devExt->remappedKeys[i].remappedKey.Flags | (data.Flags & ~KEY_TYPES);
             break;
         }
     }
 
     garbageCollect();
 
-    data.Flags = data.Flags & (KEY_E0 | KEY_E1 | KEY_BREAK);
+    data.Flags = data.Flags & (KEY_TYPES | KEY_BREAK);
     if (data.Flags & KEY_BREAK) { //remove
-        data.Flags = data.Flags & (KEY_E0 | KEY_E1);
-        origData.Flags = origData.Flags & (KEY_E0 | KEY_E1);
+        data.Flags = data.Flags & KEY_TYPES;
+        origData.Flags = origData.Flags & KEY_TYPES;
         if (devExt->lastKeyPressed.MakeCode == data.MakeCode &&
             devExt->lastKeyPressed.Flags == data.Flags) {
             RtlZeroMemory(&devExt->lastKeyPressed, sizeof(devExt->lastKeyPressed));
@@ -254,7 +254,7 @@ void VivaldiTester::garbageCollect() {
 BOOLEAN VivaldiTester::checkKey(KEYBOARD_INPUT_DATA key, KeyStruct report[MAX_CURRENT_KEYS]) {
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         if (report[i].MakeCode == key.MakeCode &&
-            report[i].Flags == (key.Flags & (KEY_E0 | KEY_E1))) {
+            report[i].Flags == (key.Flags & KEY_TYPES)) {
             return TRUE;
         }
     }
@@ -273,7 +273,7 @@ void VivaldiTester::RemapPassthrough(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS])
                 remappedStruct.remappedKey.Flags = KEY_E0;
 
                 if (addRemap(remappedStruct)) {
-                    data[i].Flags &= ~(KEY_E0 | KEY_E1);
+                    data[i].Flags &= ~KEY_TYPES;
                     data[i].MakeCode = fnKeys_set1[j];
                 }
             }
@@ -307,7 +307,7 @@ void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
                     remappedStruct.remappedKey.MakeCode = fnKeys_set1[j];
 
                     if (addRemap(remappedStruct)) {
-                        data[i].Flags &= ~(KEY_E0 | KEY_E1);
+                        data[i].Flags &= ~KEY_TYPES;
                         data[i].MakeCode = fnKeys_set1[j];
                     }
                 }
@@ -333,7 +333,7 @@ void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
 void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOARD_INPUT_DATA InputDataEnd, PULONG InputDataConsumed) {
     PKEYBOARD_INPUT_DATA pData;
     for (pData = InputDataStart; pData != InputDataEnd; pData++) { //First loop -> Refresh Modifier Keys and Change Legacy Keys to vivaldi bindings
-        if ((pData->Flags & (KEY_E0 | KEY_E1)) == 0) {
+        if ((pData->Flags & KEY_TYPES) == 0) {
             switch (pData->MakeCode)
             {
             case K_LCTRL: //L CTRL
@@ -371,7 +371,7 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
                 break;
             }
         }
-        if ((pData->Flags & (KEY_E0 | KEY_E1)) == KEY_E0) {
+        if ((pData->Flags & KEY_TYPES) == KEY_E0) {
             if (pData->MakeCode == 0x5B) { //Search Key
                 if ((pData->Flags & KEY_BREAK) == 0) {
                     devExt->SearchPressed = TRUE;
@@ -462,7 +462,7 @@ int CompareKeys(const void *raw1, const void *raw2) {
     PKEYBOARD_INPUT_DATA data1 = (PKEYBOARD_INPUT_DATA)raw1;
     PKEYBOARD_INPUT_DATA data2 = (PKEYBOARD_INPUT_DATA)raw2;
     return ((data1->MakeCode - data2->MakeCode) << 4) +
-        ((data2->Flags & (KEY_E0 | KEY_E1) - (data1->Flags & (KEY_E0 | KEY_E1))));
+        ((data2->Flags & KEY_TYPES - (data1->Flags & KEY_TYPES)));
 }
 
 void ReceiveKeys_Guarded(PKEYBOARD_INPUT_DATA startPtr, PKEYBOARD_INPUT_DATA endPtr, PULONG InputDataConsumed) {
@@ -479,7 +479,7 @@ void ReceiveKeys_Guarded(PKEYBOARD_INPUT_DATA startPtr, PKEYBOARD_INPUT_DATA end
 
     for (ULONG i = 0; i < (endPtr - 1) - startPtr; i++) {
         assert(startPtr[i].MakeCode != startPtr[i + 1].MakeCode ||
-            (startPtr[i].Flags & (KEY_E0 | KEY_E1)) != (startPtr[i + 1].Flags & (KEY_E0 | KEY_E1)));
+            (startPtr[i].Flags & KEY_TYPES) != (startPtr[i + 1].Flags & KEY_TYPES));
     }
 
     *InputDataConsumed = consumedCount;
