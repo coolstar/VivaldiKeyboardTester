@@ -61,6 +61,7 @@ class VivaldiTester {
     BOOLEAN SearchPressed;
 
     KeyStruct currentKeys[MAX_CURRENT_KEYS];
+    KeyStruct lastKeyPressed;
     int numKeysPressed = 0;
 
     void updateKey(KeyStruct key);
@@ -87,6 +88,7 @@ VivaldiTester::VivaldiTester() {
 
     filterExt->numKeysPressed = 0;
     RtlZeroMemory(&filterExt->currentKeys, sizeof(filterExt->currentKeys));
+    RtlZeroMemory(&filterExt->lastKeyPressed, sizeof(filterExt->lastKeyPressed));
 
     filterExt->functionRowCount = 0;
     RtlZeroMemory(&filterExt->functionRowKeys, sizeof(filterExt->functionRowKeys));
@@ -113,33 +115,6 @@ void VivaldiTester::updateKey(KeyStruct data) {
         }
     }
 
-    data.Flags = data.Flags & (KEY_E0 | KEY_E1 | KEY_BREAK);
-    if (data.Flags & KEY_BREAK) { //remove
-        data.Flags = data.Flags & (KEY_E0 | KEY_E1);
-        for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
-            if (devExt->currentKeys[i].MakeCode == data.MakeCode &&
-                devExt->currentKeys[i].Flags == data.Flags) {
-                devExt->currentKeys[i].InternalFlags |= INTFLAG_REMOVED;
-            }
-            else if (devExt->currentKeys[i].Flags != 0 ||
-                devExt->currentKeys[i].MakeCode != 0) {
-            }
-        }
-    }
-    else {
-        for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
-            if (devExt->currentKeys[i].Flags == 0x00 && devExt->currentKeys[i].MakeCode == 0x00) {
-                devExt->currentKeys[i] = data;
-                devExt->currentKeys[i].InternalFlags |= INTFLAG_NEW;
-                devExt->numKeysPressed++;
-                break;
-            }
-            else if (devExt->currentKeys[i].Flags == data.Flags && devExt->currentKeys[i].MakeCode == data.MakeCode) {
-                return;
-            }
-        }
-    }
-
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         KeyStruct keyCodes[MAX_CURRENT_KEYS] = { 0 };
         int j = 0;
@@ -152,6 +127,36 @@ void VivaldiTester::updateKey(KeyStruct data) {
         }
         devExt->numKeysPressed = j;
         RtlCopyMemory(&devExt->currentKeys, keyCodes, sizeof(keyCodes));
+    }
+
+    data.Flags = data.Flags & (KEY_E0 | KEY_E1 | KEY_BREAK);
+    if (data.Flags & KEY_BREAK) { //remove
+        data.Flags = data.Flags & (KEY_E0 | KEY_E1);
+        if (devExt->lastKeyPressed.MakeCode == data.MakeCode &&
+            devExt->lastKeyPressed.Flags == data.Flags) {
+            RtlZeroMemory(&devExt->lastKeyPressed, sizeof(devExt->lastKeyPressed));
+        }
+
+        for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+            if (devExt->currentKeys[i].MakeCode == data.MakeCode &&
+                devExt->currentKeys[i].Flags == data.Flags) {
+                devExt->currentKeys[i].InternalFlags |= INTFLAG_REMOVED;
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+            if (devExt->currentKeys[i].Flags == 0x00 && devExt->currentKeys[i].MakeCode == 0x00) {
+                devExt->currentKeys[i] = data;
+                devExt->currentKeys[i].InternalFlags |= INTFLAG_NEW;
+                devExt->numKeysPressed++;
+                devExt->lastKeyPressed = data;
+                break;
+            }
+            else if (devExt->currentKeys[i].Flags == data.Flags && devExt->currentKeys[i].MakeCode == data.MakeCode) {
+                break;
+            }
+        }
     }
 }
 
@@ -248,7 +253,7 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
         //Now make the data HID-like for easier handling
         ULONG i = 0;
         for (i = 0; i < (InputDataEnd - InputDataStart); i++) {
-            KeyStruct key;
+            KeyStruct key = { 0 };
             key.MakeCode = InputDataStart[i].MakeCode;
             key.Flags = InputDataStart[i].Flags;
             updateKey(key);
@@ -257,12 +262,21 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
     }
 
     KEYBOARD_INPUT_DATA newReport[MAX_CURRENT_KEYS] = { 0 };
-    //Add new keys
-    for (int i = 0, j = 0; i < devExt->numKeysPressed; i++) { //Prepare new report for remapper to sort through
-        if (devExt->currentKeys[i].InternalFlags & INTFLAG_NEW) {
-            newReport[j].MakeCode = devExt->currentKeys[i].MakeCode;
-            newReport[j].Flags = devExt->currentKeys[i].Flags;
-            devExt->currentKeys[i].InternalFlags &= ~INTFLAG_NEW;
+    {
+        //Add new keys
+        int j = 0;
+        for (int i = 0; i < devExt->numKeysPressed; i++) { //Prepare new report for remapper to sort through
+            if (devExt->currentKeys[i].InternalFlags & INTFLAG_NEW) {
+                newReport[j].MakeCode = devExt->currentKeys[i].MakeCode;
+                newReport[j].Flags = devExt->currentKeys[i].Flags;
+                devExt->currentKeys[i].InternalFlags &= ~INTFLAG_NEW;
+                j++;
+            }
+        }
+        //If no keys, add the last key (if present)
+        if (j == 0 && (devExt->lastKeyPressed.MakeCode != 0 || devExt->lastKeyPressed.Flags != 0)) {
+            newReport[j].MakeCode = devExt->lastKeyPressed.MakeCode;
+            newReport[j].Flags = devExt->lastKeyPressed.Flags;
             j++;
         }
     }
@@ -322,17 +336,17 @@ void ReceiveKeys_Guarded(PKEYBOARD_INPUT_DATA startPtr, PKEYBOARD_INPUT_DATA end
 
     ULONG consumedCount = 0;
 
-    for (ULONG i = 0; i < (endPtr - 1) - startPtr; i++) {
-        assert(startPtr[i].MakeCode != startPtr[i + 1].MakeCode || 
-            (startPtr[i].Flags & (KEY_E0 | KEY_E1)) != (startPtr[i + 1].Flags & (KEY_E0 | KEY_E1)));
-    }
-
     printf("\t\t==Frame Start==\n");
     for (ULONG i = 0; i < endPtr - startPtr; i++) {
         printf("\t\t\tKey %d: Code 0x%x, Flags 0x%x\n", i, startPtr[i].MakeCode, startPtr[i].Flags);
         consumedCount++;
     }
     printf("\t\t==Frame End==\n");
+
+    for (ULONG i = 0; i < (endPtr - 1) - startPtr; i++) {
+        assert(startPtr[i].MakeCode != startPtr[i + 1].MakeCode ||
+            (startPtr[i].Flags & (KEY_E0 | KEY_E1)) != (startPtr[i + 1].Flags & (KEY_E0 | KEY_E1)));
+    }
 
     *InputDataConsumed = consumedCount;
 }
@@ -389,5 +403,49 @@ int main()
 
     testData[0].Flags |= KEY_BREAK;
     printf("Mute Release\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    RtlZeroMemory(testData, sizeof(testData));
+    testData[0].MakeCode = 0x1E;
+    testData[0].Flags = 0;
+    printf("A Press\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    printf("A Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    printf("A Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = 0x1F;
+    testData[0].Flags = 0;
+    printf("S Press + A Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    printf("S + A Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    printf("S + A Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    printf("S + A Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = 0x1E;
+    testData[0].Flags = KEY_BREAK;
+    printf("A Release\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = 0x1F;
+    testData[0].Flags = 0;
+    printf("S Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    printf("S Hold\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = 0x1F;
+    testData[0].Flags = KEY_BREAK;
+    printf("S Release\n");
     SubmitKeys_Guarded(&test, testData, 1);
 }
