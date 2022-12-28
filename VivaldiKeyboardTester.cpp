@@ -46,6 +46,11 @@ typedef struct KeyStruct {
     USHORT InternalFlags;
 } KeyStruct, * PKeyStruct;
 
+typedef struct RemappedKeyStruct {
+    struct KeyStruct origKey;
+    struct KeyStruct remappedKey;
+} RemappedKeyStruct, * PRemappedKeyStruct;
+
 #define MAX_CURRENT_KEYS 20
 
 class VivaldiTester {
@@ -64,10 +69,17 @@ class VivaldiTester {
     KeyStruct lastKeyPressed;
     int numKeysPressed = 0;
 
+    RemappedKeyStruct remappedKeys[MAX_CURRENT_KEYS];
+    int numRemaps;
+
     void updateKey(KeyStruct key);
+
+    BOOLEAN addRemap(RemappedKeyStruct remap);
+    void garbageCollect();
+
     BOOLEAN checkKey(KEYBOARD_INPUT_DATA key, KeyStruct report[MAX_CURRENT_KEYS]);
     void RemapPassthrough(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS]);
-    void RemapCrosTest(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS]);
+    void RemapLegacy(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS]);
 
 public:
     VivaldiTester();
@@ -90,6 +102,9 @@ VivaldiTester::VivaldiTester() {
     RtlZeroMemory(&filterExt->currentKeys, sizeof(filterExt->currentKeys));
     RtlZeroMemory(&filterExt->lastKeyPressed, sizeof(filterExt->lastKeyPressed));
 
+    RtlZeroMemory(&filterExt->remappedKeys, sizeof(filterExt->remappedKeys));
+    filterExt->numRemaps = 0;
+
     filterExt->functionRowCount = 0;
     RtlZeroMemory(&filterExt->functionRowKeys, sizeof(filterExt->functionRowKeys));
 
@@ -111,23 +126,28 @@ VivaldiTester::VivaldiTester() {
 void VivaldiTester::updateKey(KeyStruct data) {
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         if (devExt->currentKeys[i].InternalFlags & INTFLAG_REMOVED) {
-            RtlZeroMemory(&devExt->currentKeys[i], sizeof(devExt->currentKeys[0]));
+            for (int j = 0; j < MAX_CURRENT_KEYS; j++) { //Remove any remaps if the original key is to be removed
+                if (devExt->remappedKeys[j].origKey.MakeCode == devExt->currentKeys[i].MakeCode &&
+                    devExt->remappedKeys[j].origKey.Flags == devExt->currentKeys[i].Flags) {
+                    RtlZeroMemory(&devExt->remappedKeys[j], sizeof(devExt->remappedKeys[0]));
+                }
+            }
+
+            RtlZeroMemory(&devExt->currentKeys[i], sizeof(devExt->currentKeys[0])); //Remove any keys marked to be removed
         }
     }
 
+    //Apply any remaps if they were done
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
-        KeyStruct keyCodes[MAX_CURRENT_KEYS] = { 0 };
-        int j = 0;
-        for (int k = 0; k < MAX_CURRENT_KEYS; k++) {
-            if (devExt->currentKeys[k].Flags != 0 ||
-                devExt->currentKeys[k].MakeCode != 0) {
-                keyCodes[j] = devExt->currentKeys[k];
-                j++;
-            }
+        if (devExt->remappedKeys[i].origKey.MakeCode == data.MakeCode &&
+            devExt->remappedKeys[i].origKey.Flags == (data.Flags & (KEY_E0 | KEY_E1))) {
+            data.MakeCode = devExt->remappedKeys[i].remappedKey.MakeCode;
+            data.Flags = devExt->remappedKeys[i].remappedKey.Flags | (data.Flags & ~(KEY_E0 | KEY_E1));
+            break;
         }
-        devExt->numKeysPressed = j;
-        RtlCopyMemory(&devExt->currentKeys, keyCodes, sizeof(keyCodes));
     }
+
+    garbageCollect();
 
     data.Flags = data.Flags & (KEY_E0 | KEY_E1 | KEY_BREAK);
     if (data.Flags & KEY_BREAK) { //remove
@@ -160,6 +180,75 @@ void VivaldiTester::updateKey(KeyStruct data) {
     }
 }
 
+BOOLEAN VivaldiTester::addRemap(RemappedKeyStruct remap) {
+    for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+        if (devExt->remappedKeys[i].origKey.MakeCode == remap.origKey.MakeCode &&
+            devExt->remappedKeys[i].origKey.Flags == remap.remappedKey.Flags) {
+            if (memcmp(&devExt->remappedKeys[i], &remap, sizeof(remap)) == 0) {
+                return TRUE; //already exists
+            }
+            else {
+                return FALSE; //existing remap exists but not the same
+            }
+        }
+    }
+
+    garbageCollect();
+
+    const RemappedKeyStruct emptyStruct = { 0 };
+    for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+        if (memcmp(&devExt->remappedKeys[i], &emptyStruct, sizeof(emptyStruct)) == 0) {
+            devExt->remappedKeys[i] = remap;
+
+
+            //Now apply remap
+            for (int j = 0; j < MAX_CURRENT_KEYS; j++) {
+                if (devExt->currentKeys[j].MakeCode == remap.origKey.MakeCode &&
+                    devExt->currentKeys[j].Flags == remap.origKey.Flags) {
+                    devExt->currentKeys[j].MakeCode = remap.remappedKey.MakeCode;
+                    devExt->currentKeys[j].Flags = remap.remappedKey.Flags;
+                    break;
+                }
+            }
+
+            return TRUE;
+        }
+    }
+    return FALSE; //no slot found
+}
+
+void VivaldiTester::garbageCollect() {
+    //Clear out any empty remap slots
+    for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+        RemappedKeyStruct keyRemaps[MAX_CURRENT_KEYS] = { 0 };
+        const RemappedKeyStruct emptyStruct = { 0 };
+        int j = 0;
+        for (int k = 0; k < MAX_CURRENT_KEYS; k++) {
+            if (memcmp(&devExt->remappedKeys[k], &emptyStruct, sizeof(emptyStruct)) != 0) {
+                keyRemaps[j] = devExt->remappedKeys[k];
+                j++;
+            }
+        }
+        devExt->numRemaps = j;
+        RtlCopyMemory(&devExt->remappedKeys, keyRemaps, sizeof(keyRemaps));
+    }
+
+    //Clear out any empty key slots
+    for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+        KeyStruct keyCodes[MAX_CURRENT_KEYS] = { 0 };
+        int j = 0;
+        for (int k = 0; k < MAX_CURRENT_KEYS; k++) {
+            if (devExt->currentKeys[k].Flags != 0 ||
+                devExt->currentKeys[k].MakeCode != 0) {
+                keyCodes[j] = devExt->currentKeys[k];
+                j++;
+            }
+        }
+        devExt->numKeysPressed = j;
+        RtlCopyMemory(&devExt->currentKeys, keyCodes, sizeof(keyCodes));
+    }
+}
+
 BOOLEAN VivaldiTester::checkKey(KEYBOARD_INPUT_DATA key, KeyStruct report[MAX_CURRENT_KEYS]) {
     for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
         if (report[i].MakeCode == key.MakeCode &&
@@ -175,22 +264,64 @@ void VivaldiTester::RemapPassthrough(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS])
         for (int j = 0; j < devExt->functionRowCount; j++) { //Set back to F1 -> F12 for passthrough
             if (data[i].MakeCode == devExt->functionRowKeys[j].MakeCode &&
                 data[i].Flags == devExt->functionRowKeys->Flags) {
-                data[i].Flags &= ~(KEY_E0 | KEY_E1);
-                data[i].MakeCode = fnKeys_set1[i];
+                RemappedKeyStruct remappedStruct = { 0 }; //register remap (Vivaldi => F1 -> F12)
+                remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                remappedStruct.origKey.Flags = data[i].Flags;
+                remappedStruct.remappedKey.MakeCode = fnKeys_set1[i];
+                remappedStruct.remappedKey.Flags = KEY_E0;
+
+                if (addRemap(remappedStruct)) {
+                    data[i].Flags &= ~(KEY_E0 | KEY_E1);
+                    data[i].MakeCode = fnKeys_set1[i];
+                }
+            }
+        }
+
+        if (devExt->LeftCtrlPressed && devExt->LeftAltPressed &&
+            data[i].MakeCode == K_BACKSP && data[i].Flags == 0) {
+            RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Alt + Backspace => Ctrl + Alt + Delete)
+            remappedStruct.origKey.MakeCode = data[i].MakeCode;
+            remappedStruct.origKey.Flags = data[i].Flags;
+            remappedStruct.remappedKey.MakeCode = K_DELETE;
+            remappedStruct.remappedKey.Flags = KEY_E0;
+
+            if (addRemap(remappedStruct)) {
+                data[i].MakeCode = K_DELETE;
+                data[i].Flags |= KEY_E0;
             }
         }
     }
 }
 
-void VivaldiTester::RemapCrosTest(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
+void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
     for (int i = 0; i < devExt->numKeysPressed; i++) {
         if (!devExt->LeftCtrlPressed) {
             for (int j = 0; j < devExt->functionRowCount; j++) { //Set back to F1 -> F12 for passthrough
                 if (data[i].MakeCode == devExt->functionRowKeys[j].MakeCode &&
                     data[i].Flags == devExt->functionRowKeys->Flags) {
-                    data[i].Flags &= ~(KEY_E0 | KEY_E1);
-                    data[i].MakeCode = fnKeys_set1[i];
+                    RemappedKeyStruct remappedStruct = { 0 }; //register remap
+                    remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                    remappedStruct.origKey.Flags = data[i].Flags;
+                    remappedStruct.remappedKey.MakeCode = fnKeys_set1[i];
+
+                    if (addRemap(remappedStruct)) {
+                        data[i].Flags &= ~(KEY_E0 | KEY_E1);
+                        data[i].MakeCode = fnKeys_set1[i];
+                    }
                 }
+            }
+        }
+
+        if (devExt->LeftCtrlPressed && devExt->LeftAltPressed &&
+            data[i].MakeCode == K_BACKSP && data[i].Flags == 0) {
+            RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Alt + Backspace => Ctrl + Alt + Delete)
+            remappedStruct.origKey.MakeCode = data[i].MakeCode;
+            remappedStruct.origKey.Flags = data[i].Flags;
+            remappedStruct.remappedKey.MakeCode = K_DELETE;
+
+            if (addRemap(remappedStruct)) {
+                data[i].MakeCode = K_DELETE;
+                data[i].Flags |= KEY_E0;
             }
         }
     }
@@ -272,7 +403,7 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
         }
     }
     //RemapPassthrough(newReport);
-    RemapCrosTest(newReport);
+    RemapLegacy(newReport);
 
     //Remove any empty keys
     int newReportKeysPresent = 0;
