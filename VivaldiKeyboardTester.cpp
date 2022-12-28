@@ -444,6 +444,12 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
     //Now prepare the report
     for (int i = 0; i < reportSize; i++) {
         newReport[i].UnitId = InputDataStart[0].UnitId;
+
+        //Always override Vivaldi Play/Pause to Windows native equivalent
+        if (newReport[i].MakeCode == VIVALDI_PLAYPAUSE &&
+            (pData->Flags & (KEY_E0 | KEY_E1)) == KEY_E0) {
+            pData->MakeCode = 0x22; //Windows native Play / Pause Code
+        }
     }
 
     ULONG DataConsumed;
