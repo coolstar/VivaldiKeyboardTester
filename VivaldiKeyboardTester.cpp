@@ -269,12 +269,12 @@ void VivaldiTester::RemapPassthrough(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS])
                 RemappedKeyStruct remappedStruct = { 0 }; //register remap (Vivaldi => F1 -> F12)
                 remappedStruct.origKey.MakeCode = data[i].MakeCode;
                 remappedStruct.origKey.Flags = data[i].Flags;
-                remappedStruct.remappedKey.MakeCode = fnKeys_set1[i];
+                remappedStruct.remappedKey.MakeCode = fnKeys_set1[j];
                 remappedStruct.remappedKey.Flags = KEY_E0;
 
                 if (addRemap(remappedStruct)) {
                     data[i].Flags &= ~(KEY_E0 | KEY_E1);
-                    data[i].MakeCode = fnKeys_set1[i];
+                    data[i].MakeCode = fnKeys_set1[j];
                 }
             }
         }
@@ -304,11 +304,11 @@ void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
                     RemappedKeyStruct remappedStruct = { 0 }; //register remap
                     remappedStruct.origKey.MakeCode = data[i].MakeCode;
                     remappedStruct.origKey.Flags = data[i].Flags;
-                    remappedStruct.remappedKey.MakeCode = fnKeys_set1[i];
+                    remappedStruct.remappedKey.MakeCode = fnKeys_set1[j];
 
                     if (addRemap(remappedStruct)) {
                         data[i].Flags &= ~(KEY_E0 | KEY_E1);
-                        data[i].MakeCode = fnKeys_set1[i];
+                        data[i].MakeCode = fnKeys_set1[j];
                     }
                 }
             }
