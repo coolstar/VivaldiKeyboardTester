@@ -46,6 +46,7 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define K_LCTRL     0x1D
 #define K_LALT      0x38
 #define K_LSHFT     0x2A
+#define K_LWIN      0x5B
 
 #define K_BACKSP    0xE
 #define K_DELETE    0x53
@@ -54,6 +55,11 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define K_DOWN      0x50
 #define K_LEFT      0x4B
 #define K_RIGHT     0x4D
+
+#define K_PGUP      0x49
+#define K_HOME      0x47
+#define K_END       0x4F
+#define K_PGDN      0x51
 
 //ALL VIVALDI USES KEY_E0
 

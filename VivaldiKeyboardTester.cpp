@@ -78,8 +78,10 @@ class VivaldiTester {
     void garbageCollect();
 
     BOOLEAN checkKey(KEYBOARD_INPUT_DATA key, KeyStruct report[MAX_CURRENT_KEYS]);
-    void RemapPassthrough(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS]);
-    void RemapLegacy(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS]);
+    BOOLEAN addKey(KEYBOARD_INPUT_DATA key, KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]);
+
+    void RemapPassthrough(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataBefore[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataAfter[MAX_CURRENT_KEYS]);
+    void RemapLegacy(KEYBOARD_INPUT_DATA report[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataBefore[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataAfter[MAX_CURRENT_KEYS]);
 
 public:
     VivaldiTester();
@@ -261,7 +263,21 @@ BOOLEAN VivaldiTester::checkKey(KEYBOARD_INPUT_DATA key, KeyStruct report[MAX_CU
     return FALSE;
 }
 
-void VivaldiTester::RemapPassthrough(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
+BOOLEAN VivaldiTester::addKey(KEYBOARD_INPUT_DATA key, KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
+    for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+        if (data[i].MakeCode == key.MakeCode &&
+            data[i].Flags == (key.Flags & KEY_TYPES)) {
+            return data[i].Flags == key.Flags; //If both contain the same bit value of BREAK, we're ok. Otherwise we're not
+        }
+        else if (data[i].MakeCode == 0 && data[i].Flags == 0) {
+            data[i] = key;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void VivaldiTester::RemapPassthrough(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataBefore[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataAfter[MAX_CURRENT_KEYS]) {
     for (int i = 0; i < devExt->numKeysPressed; i++) {
         for (int j = 0; j < devExt->functionRowCount; j++) { //Set back to F1 -> F12 for passthrough
             if (data[i].MakeCode == devExt->functionRowKeys[j].MakeCode &&
@@ -295,7 +311,7 @@ void VivaldiTester::RemapPassthrough(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS])
     }
 }
 
-void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
+void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataBefore[MAX_CURRENT_KEYS], KEYBOARD_INPUT_DATA dataAfter[MAX_CURRENT_KEYS]) {
     for (int i = 0; i < devExt->numKeysPressed; i++) {
         if (!devExt->LeftCtrlPressed) {
             for (int j = 0; j < devExt->functionRowCount; j++) { //Set back to F1 -> F12 for passthrough
@@ -313,6 +329,232 @@ void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
                 }
             }
         }
+        else {
+            if (data[i].MakeCode == VIVALDI_FULLSCREEN &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                if (!devExt->LeftShiftPressed) {
+                    RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Fullscreen => F11)
+                    remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                    remappedStruct.origKey.Flags = data[i].Flags;
+                    remappedStruct.remappedKey.MakeCode = fnKeys_set1[10];
+
+                    KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                    ctrlData.MakeCode = K_LCTRL;
+                    ctrlData.Flags = KEY_BREAK;
+                    addKey(ctrlData, dataBefore);
+                    ctrlData.Flags = 0;
+                    addKey(ctrlData, dataAfter);
+
+                    if (addRemap(remappedStruct)) {
+                        data[i].MakeCode = fnKeys_set1[10];
+                        data[i].Flags &= ~KEY_TYPES;
+                    }
+                }
+                else {
+                    RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Shift + Fullscreen => Windows + P)
+                    remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                    remappedStruct.origKey.Flags = data[i].Flags;
+                    remappedStruct.remappedKey.MakeCode = 0x19;
+
+                    KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                    ctrlData.MakeCode = K_LCTRL;
+                    ctrlData.Flags = KEY_BREAK;
+                    addKey(ctrlData, dataBefore);
+                    ctrlData.Flags = 0;
+                    addKey(ctrlData, dataAfter);
+
+                    KEYBOARD_INPUT_DATA shiftData = { 0 };
+                    shiftData.MakeCode = K_LSHFT;
+                    shiftData.Flags = KEY_BREAK;
+                    addKey(shiftData, dataBefore);
+                    shiftData.Flags = 0;
+                    addKey(shiftData, dataAfter);
+
+                    if (!devExt->SearchPressed) {
+                        KEYBOARD_INPUT_DATA winData = { 0 };
+                        winData.MakeCode = K_LWIN;
+                        winData.Flags = KEY_E0;
+                        addKey(winData, dataBefore);
+                        winData.Flags |= KEY_BREAK;
+                        addKey(winData, dataAfter);
+                    }
+
+                    if (addRemap(remappedStruct)) {
+                        data[i].MakeCode = 0x19;
+                        data[i].Flags &= ~KEY_TYPES;
+                    }
+                }
+            }
+            else if (data[i].MakeCode == VIVALDI_OVERVIEW &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                if (!devExt->LeftShiftPressed) {
+                    RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Overview => Windows + Tab)
+                    remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                    remappedStruct.origKey.Flags = data[i].Flags;
+                    remappedStruct.remappedKey.MakeCode = 0x0F;
+
+                    KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                    ctrlData.MakeCode = K_LCTRL;
+                    ctrlData.Flags = KEY_BREAK;
+                    addKey(ctrlData, dataBefore);
+                    ctrlData.Flags = 0;
+                    addKey(ctrlData, dataAfter);
+
+                    if (!devExt->SearchPressed) {
+                        KEYBOARD_INPUT_DATA winData = { 0 };
+                        winData.MakeCode = K_LWIN;
+                        winData.Flags = KEY_E0;
+                        addKey(winData, dataBefore);
+                        winData.Flags |= KEY_BREAK;
+                        addKey(winData, dataAfter);
+                    }
+
+                    if (addRemap(remappedStruct)) {
+                        data[i].MakeCode = 0x0F;
+                        data[i].Flags &= ~KEY_TYPES;
+                    }
+                }
+                else {
+                    RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Shift + Overview => Windows + Shift + S)
+                    remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                    remappedStruct.origKey.Flags = data[i].Flags;
+                    remappedStruct.remappedKey.MakeCode = 0x1F;
+
+                    KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                    ctrlData.MakeCode = K_LCTRL;
+                    ctrlData.Flags = KEY_BREAK;
+                    addKey(ctrlData, dataBefore);
+                    ctrlData.Flags = 0;
+                    addKey(ctrlData, dataAfter);
+
+                    if (!devExt->SearchPressed) {
+                        KEYBOARD_INPUT_DATA winData = { 0 };
+                        winData.MakeCode = K_LWIN;
+                        winData.Flags = KEY_E0;
+                        addKey(winData, dataBefore);
+                        winData.Flags |= KEY_BREAK;
+                        addKey(winData, dataAfter);
+                    }
+
+                    if (addRemap(remappedStruct)) {
+                        data[i].MakeCode = 0x1F;
+                        data[i].Flags &= ~KEY_TYPES;
+                    }
+                }
+            }
+            else if (data[i].MakeCode == VIVALDI_SNAPSHOT &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Snapshot => Windows + Shift + S)
+                remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                remappedStruct.origKey.Flags = data[i].Flags;
+                remappedStruct.remappedKey.MakeCode = 0x1F;
+
+                KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                ctrlData.MakeCode = K_LCTRL;
+                ctrlData.Flags = KEY_BREAK;
+                addKey(ctrlData, dataBefore);
+                ctrlData.Flags = 0;
+                addKey(ctrlData, dataAfter);
+
+                if (!devExt->LeftShiftPressed) {
+                    KEYBOARD_INPUT_DATA shiftData = { 0 };
+                    shiftData.MakeCode = K_LSHFT;
+                    addKey(shiftData, dataBefore);
+                    shiftData.Flags = KEY_BREAK;
+                    addKey(shiftData, dataAfter);
+                }
+
+                if (!devExt->SearchPressed) {
+                    KEYBOARD_INPUT_DATA winData = { 0 };
+                    winData.MakeCode = K_LWIN;
+                    winData.Flags = KEY_E0;
+                    addKey(winData, dataBefore);
+                    winData.Flags |= KEY_BREAK;
+                    addKey(winData, dataAfter);
+                }
+
+                if (addRemap(remappedStruct)) {
+                    data[i].MakeCode = 0x1F;
+                    data[i].Flags &= ~KEY_TYPES;
+                }
+            }
+            else if (data[i].MakeCode == K_LEFT &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Left => Home)
+                remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                remappedStruct.origKey.Flags = data[i].Flags;
+                remappedStruct.remappedKey.MakeCode = K_HOME;
+                remappedStruct.remappedKey.Flags = data[i].Flags;
+
+                KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                ctrlData.MakeCode = K_LCTRL;
+                ctrlData.Flags = KEY_BREAK;
+                addKey(ctrlData, dataBefore);
+                ctrlData.Flags = 0;
+                addKey(ctrlData, dataAfter);
+
+                if (addRemap(remappedStruct)) {
+                    data[i].MakeCode = K_HOME;
+                }
+            }
+            else if (data[i].MakeCode == K_RIGHT &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Right => End)
+                remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                remappedStruct.origKey.Flags = data[i].Flags;
+                remappedStruct.remappedKey.MakeCode = K_END;
+                remappedStruct.remappedKey.Flags = data[i].Flags;
+
+                KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                ctrlData.MakeCode = K_LCTRL;
+                ctrlData.Flags = KEY_BREAK;
+                addKey(ctrlData, dataBefore);
+                ctrlData.Flags = 0;
+                addKey(ctrlData, dataAfter);
+
+                if (addRemap(remappedStruct)) {
+                    data[i].MakeCode = K_END;
+                }
+            }
+            else if (data[i].MakeCode == K_UP &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Up => Page Up)
+                remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                remappedStruct.origKey.Flags = data[i].Flags;
+                remappedStruct.remappedKey.MakeCode = K_PGUP;
+                remappedStruct.remappedKey.Flags = data[i].Flags;
+
+                KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                ctrlData.MakeCode = K_LCTRL;
+                ctrlData.Flags = KEY_BREAK;
+                addKey(ctrlData, dataBefore);
+                ctrlData.Flags = 0;
+                addKey(ctrlData, dataAfter);
+
+                if (addRemap(remappedStruct)) {
+                    data[i].MakeCode = K_PGUP;
+                }
+            }
+            else if (data[i].MakeCode == K_DOWN &&
+                (data[i].Flags & KEY_TYPES) == KEY_E0) {
+                RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Down => Page Down)
+                remappedStruct.origKey.MakeCode = data[i].MakeCode;
+                remappedStruct.origKey.Flags = data[i].Flags;
+                remappedStruct.remappedKey.MakeCode = K_PGDN;
+                remappedStruct.remappedKey.Flags = data[i].Flags;
+
+                KEYBOARD_INPUT_DATA ctrlData = { 0 };
+                ctrlData.MakeCode = K_LCTRL;
+                ctrlData.Flags = KEY_BREAK;
+                addKey(ctrlData, dataBefore);
+                ctrlData.Flags = 0;
+                addKey(ctrlData, dataAfter);
+
+                if (addRemap(remappedStruct)) {
+                    data[i].MakeCode = K_PGDN;
+                }
+            }
+        }
 
         if (devExt->LeftCtrlPressed && devExt->LeftAltPressed &&
             data[i].MakeCode == K_BACKSP && data[i].Flags == 0) {
@@ -321,6 +563,28 @@ void VivaldiTester::RemapLegacy(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS]) {
             remappedStruct.origKey.Flags = data[i].Flags;
             remappedStruct.remappedKey.MakeCode = K_DELETE;
             remappedStruct.remappedKey.Flags = KEY_E0;
+
+            if (addRemap(remappedStruct)) {
+                data[i].MakeCode = K_DELETE;
+                data[i].Flags |= KEY_E0;
+            }
+        }
+        else if (devExt->LeftCtrlPressed &&
+            data[i].MakeCode == K_BACKSP && data[i].Flags == 0) {
+            RemappedKeyStruct remappedStruct = { 0 }; //register remap (Ctrl + Backspace => Delete)
+            remappedStruct.origKey.MakeCode = data[i].MakeCode;
+            remappedStruct.origKey.Flags = data[i].Flags;
+            remappedStruct.remappedKey.MakeCode = K_DELETE;
+            remappedStruct.remappedKey.Flags = KEY_E0;
+
+            KEYBOARD_INPUT_DATA ctrlData = { 0 };
+            ctrlData.MakeCode = K_LCTRL;
+            ctrlData.Flags = KEY_BREAK;
+
+            addKey(ctrlData, dataBefore);
+
+            ctrlData.Flags = 0;
+            addKey(ctrlData, dataAfter);
 
             if (addRemap(remappedStruct)) {
                 data[i].MakeCode = K_DELETE;
@@ -372,7 +636,7 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
             }
         }
         if ((pData->Flags & KEY_TYPES) == KEY_E0) {
-            if (pData->MakeCode == 0x5B) { //Search Key
+            if (pData->MakeCode == K_LWIN) { //Search Key
                 if ((pData->Flags & KEY_BREAK) == 0) {
                     devExt->SearchPressed = TRUE;
                 }
@@ -406,9 +670,12 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
         }
     }
 
+    KEYBOARD_INPUT_DATA preReport[MAX_CURRENT_KEYS] = { 0 };
+    KEYBOARD_INPUT_DATA postReport[MAX_CURRENT_KEYS] = { 0 };
+
     //Do whichever remap was chosen
-    //RemapPassthrough(newReport);
-    RemapLegacy(newReport);
+    //RemapPassthrough(newReport, preReport, postReport);
+    RemapLegacy(newReport, preReport, postReport);
 
     //Remove any empty keys
     int newReportKeysPresent = 0;
@@ -459,8 +726,35 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
     }
 
     DbgPrint("\tHID translated Keys\n");
+
+    {
+        int preReportSize = 0;
+        for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+            if (preReport[i].Flags != 0 || preReport[i].MakeCode != 0) {
+                preReportSize++;
+            }
+        }
+
+        if (preReportSize > 0) {
+            ReceiveKeys_Guarded(preReport, preReport + preReportSize, &DataConsumed);
+        }
+    }
+
     if (reportSize > 0) {
         ReceiveKeys_Guarded(newReport, newReport + reportSize, &DataConsumed);
+    }
+
+    {
+        int postReportSize = 0;
+        for (int i = 0; i < MAX_CURRENT_KEYS; i++) {
+            if (postReport[i].Flags != 0 || postReport[i].MakeCode != 0) {
+                postReportSize++;
+            }
+        }
+
+        if (postReportSize > 0) {
+            ReceiveKeys_Guarded(postReport, postReport + postReportSize, &DataConsumed);
+        }
     }
 }
 
