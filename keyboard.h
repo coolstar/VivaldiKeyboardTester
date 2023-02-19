@@ -48,6 +48,10 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define K_LSHFT     0x2A
 #define K_LWIN      0x5B
 
+#define K_RCTRL     0x1D
+#define K_RALT      0x38
+#define K_RSHFT     0x36
+
 #define K_BACKSP    0xE
 #define K_DELETE    0x53
 
@@ -72,6 +76,7 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define VIVALDI_SNAPSHOT            0x13
 #define VIVALDI_BRIGHTNESSDN        0x14
 #define VIVALDI_BRIGHTNESSUP        0x15
+#define VIVALDI_PRIVACY_TOGGLE      0x16
 #define VIVALDI_KBD_BKLIGHT_DOWN    0x17
 #define VIVALDI_KBD_BKLIGHT_UP      0x18
 #define VIVALDI_KBD_BKLIGHT_TOGGLE  0x1e
@@ -79,3 +84,14 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define VIVALDI_MUTE                0x20
 #define VIVALDI_VOLDN               0x2e
 #define VIVALDI_VOLUP               0x30
+#define VIVALDI_NEXT_TRACK          0x19
+#define VIVALDI_PREV_TRACK          0x10
+#define VIVALDI_MICMUTE             0x1b
+
+#define CROSKBHID_BRIGHTNESS_UP 0x01
+#define CROSKBHID_BRIGHTNESS_DN 0x02
+#define CROSKBHID_KBLT_UP       0x04
+#define CROSKBHID_KBLT_DN       0x08
+#define CROSKBHID_KBLT_TOGGLE   0x10
+
+#define REMAP_CFG_MAGIC 'CrKB'
