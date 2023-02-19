@@ -54,6 +54,7 @@ typedef struct _KEYBOARD_INPUT_DATA {
 
 #define K_BACKSP    0xE
 #define K_DELETE    0x53
+#define K_LOCK      0x5D
 
 #define K_UP        0x48
 #define K_DOWN      0x50
