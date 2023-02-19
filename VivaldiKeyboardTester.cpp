@@ -33,7 +33,10 @@
 #include "keyboard.h"
 
 const UINT8 fnKeys_set1[] = {
-    0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44, 0x57, 0x58
+    0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44, 0x57, 0x58,
+
+    //F13 - F16
+    0x64, 0x64, 0x66, 0x67
 };
 
 void ReceiveKeys_Guarded(PKEYBOARD_INPUT_DATA startPtr, PKEYBOARD_INPUT_DATA endPtr, PULONG InputDataConsumed);
@@ -157,9 +160,18 @@ VivaldiTester::VivaldiTester() {
     RtlCopyMemory(&filterExt->legacyTopRowKeys, &fnKeys_set1, sizeof(filterExt->legacyTopRowKeys));
     RtlCopyMemory(&filterExt->legacyVivaldi, &legacyVivaldi, sizeof(filterExt->legacyVivaldi));
 
-    filterExt->functionRowCount = sizeof(filterExt->legacyVivaldi);
+    /*filterExt->functionRowCount = sizeof(filterExt->legacyVivaldi);
     for (int i = 0; i < sizeof(filterExt->legacyVivaldi); i++) {
         filterExt->functionRowKeys[i].MakeCode = filterExt->legacyVivaldi[i];
+        filterExt->functionRowKeys[i].Flags |= KEY_E0;
+    }*/
+
+    filterExt->functionRowCount = 13;
+    UINT8 jinlon_keys[] = {VIVALDI_BACK, VIVALDI_REFRESH, VIVALDI_FULLSCREEN, VIVALDI_OVERVIEW, VIVALDI_SNAPSHOT,
+        VIVALDI_BRIGHTNESSDN, VIVALDI_BRIGHTNESSUP, VIVALDI_KBD_BKLIGHT_DOWN, VIVALDI_KBD_BKLIGHT_UP, VIVALDI_PLAYPAUSE, 
+        VIVALDI_MUTE, VIVALDI_VOLDN, VIVALDI_VOLUP};
+    for (int i = 0; i < sizeof(jinlon_keys); i++) {
+        filterExt->functionRowKeys[i].MakeCode = jinlon_keys[i];
         filterExt->functionRowKeys[i].Flags |= KEY_E0;
     }
 
@@ -1046,7 +1058,7 @@ int main()
     KEYBOARD_INPUT_DATA testData[2];
     RtlZeroMemory(testData, sizeof(testData)); //Reset test data
 
-    testData[0].MakeCode = K_LCTRL;
+    /*testData[0].MakeCode = K_LCTRL;
     printf("Ctrl\n");
     SubmitKeys_Guarded(&test, testData, 1);
 
@@ -1182,15 +1194,15 @@ int main()
     testData[0].MakeCode = K_LCTRL;
     testData[0].Flags = KEY_BREAK;
     printf("Release Ctrl\n");
-    SubmitKeys_Guarded(&test, testData, 1);
+    SubmitKeys_Guarded(&test, testData, 1);*/
 
-    testData[0].MakeCode = VIVALDI_BRIGHTNESSDN;
+    testData[0].MakeCode = VIVALDI_VOLUP;
     testData[0].Flags = KEY_E0;
-    printf("Brightness Down\n");
+    printf("Volume Up\n");
     SubmitKeys_Guarded(&test, testData, 1);
 
-    testData[0].MakeCode = VIVALDI_BRIGHTNESSDN;
+    testData[0].MakeCode = VIVALDI_VOLUP;
     testData[0].Flags = KEY_E0 | KEY_BREAK;
-    printf("Release Brightness Down\n");
+    printf("Release Volume Up\n");
     SubmitKeys_Guarded(&test, testData, 1);
 }
