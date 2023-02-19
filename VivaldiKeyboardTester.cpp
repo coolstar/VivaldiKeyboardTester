@@ -770,7 +770,7 @@ void VivaldiTester::RemapLoaded(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS], KEYB
                         if ((addData.Flags & KEY_BREAK) == 0) {
                             removeData.Flags |= KEY_BREAK;
                         }
-                        addKey(addData, dataAfter);
+                        addKey(removeData, dataAfter);
                     }
                 }
 
@@ -1363,7 +1363,7 @@ int main()
     KEYBOARD_INPUT_DATA testData[2];
     RtlZeroMemory(testData, sizeof(testData)); //Reset test data
 
-    /*testData[0].MakeCode = K_LCTRL;
+    testData[0].MakeCode = K_LCTRL;
     printf("Ctrl\n");
     SubmitKeys_Guarded(&test, testData, 1);
 
@@ -1442,7 +1442,7 @@ int main()
     printf("S Release\n");
     SubmitKeys_Guarded(&test, testData, 1);
 
-    RtlZeroMemory(testData, sizeof(testData)); //Reset test data*/
+    RtlZeroMemory(testData, sizeof(testData)); //Reset test data
 
     testData[0].MakeCode = K_LCTRL;
     printf("Ctrl\n");
