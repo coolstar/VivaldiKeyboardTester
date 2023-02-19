@@ -193,7 +193,7 @@ VivaldiTester::VivaldiTester() {
 
     remapCfgs->cfg[3].LeftCtrl = RemapCfgKeyStateEnforceNot;
     remapCfgs->cfg[3].originalKey.MakeCode = VIVALDI_FULLSCREEN;
-    remapCfgs->cfg[3].originalKey.MakeCode = KEY_E0;
+    remapCfgs->cfg[3].originalKey.Flags = KEY_E0;
     remapCfgs->cfg[3].remapVivaldiToFnKeys = TRUE;
 
     remapCfgs->cfg[4].LeftCtrl = RemapCfgKeyStateEnforceNot;
@@ -208,7 +208,7 @@ VivaldiTester::VivaldiTester() {
 
     remapCfgs->cfg[6].LeftCtrl = RemapCfgKeyStateEnforceNot;
     remapCfgs->cfg[6].originalKey.MakeCode = VIVALDI_BRIGHTNESSDN;
-    remapCfgs->cfg[6].originalKey.MakeCode = KEY_E0;
+    remapCfgs->cfg[6].originalKey.Flags = KEY_E0;
     remapCfgs->cfg[6].remapVivaldiToFnKeys = TRUE;
 
     remapCfgs->cfg[7].LeftCtrl = RemapCfgKeyStateEnforceNot;
@@ -1499,5 +1499,15 @@ int main()
     testData[0].MakeCode = K_LCTRL;
     testData[0].Flags = KEY_BREAK;
     printf("Release Ctrl\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = VIVALDI_BRIGHTNESSDN;
+    testData[0].Flags = KEY_E0;
+    printf("Brightness Down\n");
+    SubmitKeys_Guarded(&test, testData, 1);
+
+    testData[0].MakeCode = VIVALDI_BRIGHTNESSDN;
+    testData[0].Flags = KEY_E0 | KEY_BREAK;
+    printf("Release Brightness Down\n");
     SubmitKeys_Guarded(&test, testData, 1);
 }
