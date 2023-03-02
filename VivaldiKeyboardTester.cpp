@@ -105,6 +105,7 @@ class VivaldiTester {
     BOOLEAN LeftCtrlPressed;
     BOOLEAN LeftAltPressed;
     BOOLEAN LeftShiftPressed;
+    BOOLEAN AssistantPressed;
     BOOLEAN SearchPressed;
 
     BOOLEAN RightCtrlPressed;
@@ -745,6 +746,8 @@ void VivaldiTester::RemapLoaded(KEYBOARD_INPUT_DATA data[MAX_CURRENT_KEYS], KEYB
                 continue;
             if (!validateBool(cfg.LeftShift, devExt->LeftShiftPressed))
                 continue;
+            if (!validateBool(cfg.Assistant, devExt->AssistantPressed))
+                continue;
             if (!validateBool(cfg.Search, devExt->SearchPressed))
                 continue;
             if (!validateBool(cfg.RightCtrl, devExt->RightCtrlPressed))
@@ -856,6 +859,14 @@ void VivaldiTester::ServiceCallback(PKEYBOARD_INPUT_DATA InputDataStart, PKEYBOA
         if ((pData->Flags & KEY_TYPES) == KEY_E0) {
             switch (pData->MakeCode)
             {
+            case K_ASSISTANT: //Assistant Key
+                if ((pData->Flags & KEY_BREAK) == 0) {
+                    devExt->AssistantPressed = TRUE;
+                }
+                else {
+                    devExt->AssistantPressed = FALSE;
+                }
+                break;
             case K_LWIN: //Search Key
                 if ((pData->Flags & KEY_BREAK) == 0) {
                     devExt->SearchPressed = TRUE;
