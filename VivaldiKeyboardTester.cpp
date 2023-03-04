@@ -186,6 +186,14 @@ VivaldiTester::VivaldiTester() {
 
 
     size_t cfgSize = offsetof(RemapCfgs, cfg) + sizeof(RemapCfg) * 40;
+
+    if (offsetof(RemapCfgs, cfg) != 17) {
+        DbgPrint("Warning: RemapCfgs prefix size is incorrect. Your settings file may not work in croskeyboard4!\n");
+    }
+    if (sizeof(RemapCfg) != 73) {
+        DbgPrint("Warning: RemapCfg size is incorrect. Your settings file may not work in croskeyboard4!\n");
+    }
+
     PRemapCfgs remapCfgs = (PRemapCfgs)malloc(cfgSize);
     RtlZeroMemory(remapCfgs, cfgSize);
 
@@ -511,6 +519,17 @@ VivaldiTester::VivaldiTester() {
     filterExt->remapCfgs = remapCfgs;
 
     DbgPrint("Initialized\n");
+
+    FILE* dumpedSettingsFile;
+    if (fopen_s(&dumpedSettingsFile, "croskbsettings.bin", "wb") == 0) {
+        fwrite(remapCfgs, 1, cfgSize, dumpedSettingsFile);
+        fclose(dumpedSettingsFile);
+
+        DbgPrint("Wrote active settings to croskbsettings.bin!\n");
+    }
+    else {
+        DbgPrint("Warning: Failed to write settings for croskeyboard4! Check that your permissions are correct!");
+    }
 }
 
 #undef filterExt
