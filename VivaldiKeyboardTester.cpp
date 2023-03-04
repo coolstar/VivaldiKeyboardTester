@@ -49,7 +49,13 @@ void ReceiveKeys_Guarded(PKEYBOARD_INPUT_DATA startPtr, PKEYBOARD_INPUT_DATA end
 typedef struct RemapCfgKey {
     USHORT MakeCode;
     USHORT Flags;
-} RemapCfgKey, *PRemapCfgKey;
+} RemapCfgKey, * PRemapCfgKey;
+
+typedef enum RemapCfgOverride {
+    RemapCfgOverrideAutoDetect,
+    RemapCfgOverrideEnable,
+    RemapCfgOverrideDisable
+} RemapCfgOverride, * PRemapCfgOverride;
 
 typedef enum RemapCfgKeyState {
     RemapCfgKeyStateNoDetect,
@@ -70,14 +76,16 @@ typedef struct RemapCfg {
     BOOLEAN remapVivaldiToFnKeys;
     RemapCfgKey remappedKey;
     RemapCfgKey additionalKeys[8];
-} RemapCfg, *PRemapCfg;
+} RemapCfg, * PRemapCfg;
 
 typedef struct RemapCfgs {
     UINT32 magic;
     UINT32 remappings;
     BOOLEAN FlipSearchAndAssistantOnPixelbook;
+    RemapCfgOverride HasAssistantKey;
+    RemapCfgOverride IsNonChromeEC;
     RemapCfg cfg[1];
-} RemapCfgs, *PRemapCfgs;
+} RemapCfgs, * PRemapCfgs;
 #include <poppack.h>
 
 typedef struct KeyStruct {
@@ -181,8 +189,12 @@ VivaldiTester::VivaldiTester() {
     PRemapCfgs remapCfgs = (PRemapCfgs)malloc(cfgSize);
     RtlZeroMemory(remapCfgs, cfgSize);
 
+    //Begin map vivalid keys (without Ctrl) to F# keys
+
     remapCfgs->magic = REMAP_CFG_MAGIC;
-    remapCfgs->FlipSearchAndAssistantOnPixelbook = FALSE;
+    remapCfgs->FlipSearchAndAssistantOnPixelbook = TRUE;
+    remapCfgs->HasAssistantKey = RemapCfgOverrideAutoDetect;
+    remapCfgs->IsNonChromeEC = RemapCfgOverrideAutoDetect;
     remapCfgs->remappings = 40;
 
     //Begin map vivalid keys (without Ctrl) to F# keys
