@@ -184,6 +184,138 @@ VivaldiTester::VivaldiTester() {
         filterExt->functionRowKeys[i].Flags |= KEY_E0;
     }
 
+    { //Generate wilco keys
+        size_t cfgSizeWilco = offsetof(RemapCfgs, cfg) + sizeof(RemapCfg) * 12;
+        PRemapCfgs wilcoCfgs = (PRemapCfgs)malloc(cfgSizeWilco);
+        RtlZeroMemory(wilcoCfgs, cfgSizeWilco);
+
+        //Begin map wilco keys (Fn key and delete keys present, so minimal mappings)
+
+        wilcoCfgs->magic = REMAP_CFG_MAGIC;
+        wilcoCfgs->FlipSearchAndAssistantOnPixelbook = TRUE;
+        wilcoCfgs->HasAssistantKey = RemapCfgOverrideAutoDetect;
+        wilcoCfgs->IsNonChromeEC = RemapCfgOverrideAutoDetect;
+        wilcoCfgs->remappings = 12;
+
+        //Map Fullscreen -> F11
+
+        wilcoCfgs->cfg[0].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[0].LeftShift = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[0].originalKey.MakeCode = WILCO_FULLSCREEN;
+        wilcoCfgs->cfg[0].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[0].remappedKey.MakeCode = fnKeys_set1[10];
+
+        //Map Overview -> Windows + Tab
+
+        wilcoCfgs->cfg[1].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[1].LeftShift = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[1].Search = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[1].originalKey.MakeCode = WILCO_OVERVIEW;
+        wilcoCfgs->cfg[1].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[1].remappedKey.MakeCode = 0x0F;
+        wilcoCfgs->cfg[1].additionalKeys[0].MakeCode = K_LWIN;
+        wilcoCfgs->cfg[1].additionalKeys[0].Flags = KEY_E0;
+
+        wilcoCfgs->cfg[2].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[2].LeftShift = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[2].Search = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[2].originalKey.MakeCode = WILCO_OVERVIEW;
+        wilcoCfgs->cfg[2].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[2].remappedKey.MakeCode = 0x0F;
+
+        //Map Shift + Overview -> Windows + Shift + S
+
+        wilcoCfgs->cfg[3].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[3].LeftShift = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[3].Search = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[3].originalKey.MakeCode = WILCO_OVERVIEW;
+        wilcoCfgs->cfg[3].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[3].remappedKey.MakeCode = 0x1F;
+        wilcoCfgs->cfg[3].additionalKeys[0].MakeCode = K_LWIN;
+        wilcoCfgs->cfg[3].additionalKeys[0].Flags = KEY_E0;
+
+        wilcoCfgs->cfg[4].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[4].LeftShift = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[4].Search = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[4].originalKey.MakeCode = WILCO_OVERVIEW;
+        wilcoCfgs->cfg[4].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[4].remappedKey.MakeCode = 0x1F;
+
+        //Map Wilco Brightness -> Vivaldi Brightness
+        wilcoCfgs->cfg[5].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[5].LeftShift = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[5].Search = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[5].originalKey.MakeCode = WILCO_BRIGHTNESSDN;
+        wilcoCfgs->cfg[5].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[5].remappedKey.MakeCode = VIVALDI_BRIGHTNESSDN;
+        wilcoCfgs->cfg[5].remappedKey.Flags = KEY_E0;
+
+        wilcoCfgs->cfg[6].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[6].LeftShift = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[6].Search = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[6].originalKey.MakeCode = WILCO_BRIGHTNESSUP;
+        wilcoCfgs->cfg[6].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[6].remappedKey.MakeCode = VIVALDI_BRIGHTNESSUP;
+        wilcoCfgs->cfg[6].remappedKey.Flags = KEY_E0;
+
+        //Map Shift + Wilco Brightness -> Vivaldi Keyboard Brightness
+
+        wilcoCfgs->cfg[7].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[7].LeftShift = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[7].Search = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[7].originalKey.MakeCode = WILCO_BRIGHTNESSDN;
+        wilcoCfgs->cfg[7].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[7].remappedKey.MakeCode = VIVALDI_KBD_BKLIGHT_DOWN;
+        wilcoCfgs->cfg[7].remappedKey.Flags = KEY_E0;
+
+        wilcoCfgs->cfg[8].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[8].LeftShift = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[8].Search = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[8].originalKey.MakeCode = WILCO_BRIGHTNESSUP;
+        wilcoCfgs->cfg[8].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[8].remappedKey.MakeCode = VIVALDI_KBD_BKLIGHT_UP;
+        wilcoCfgs->cfg[8].remappedKey.Flags = KEY_E0;
+
+        //Map Project -> Windows + P
+
+        wilcoCfgs->cfg[9].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[9].LeftShift = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[9].Search = RemapCfgKeyStateEnforceNot;
+        wilcoCfgs->cfg[9].originalKey.MakeCode = WILCO_PROJECT;
+        wilcoCfgs->cfg[9].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[9].remappedKey.MakeCode = 0x19;
+        wilcoCfgs->cfg[9].additionalKeys[0].MakeCode = K_LWIN;
+        wilcoCfgs->cfg[9].additionalKeys[0].Flags = KEY_E0;
+
+        wilcoCfgs->cfg[10].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[10].LeftShift = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[10].Search = RemapCfgKeyStateEnforce;
+        wilcoCfgs->cfg[10].originalKey.MakeCode = WILCO_PROJECT;
+        wilcoCfgs->cfg[10].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[10].remappedKey.MakeCode = 0x19;
+
+        //Map Assistant -> Caps Lock (Search was remapped to assistant)
+        wilcoCfgs->cfg[11].LeftCtrl = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[11].LeftShift = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[11].Search = RemapCfgKeyStateNoDetect;
+        wilcoCfgs->cfg[11].originalKey.MakeCode = K_ASSISTANT;
+        wilcoCfgs->cfg[11].originalKey.Flags = KEY_E0;
+        wilcoCfgs->cfg[11].remappedKey.MakeCode = 0x3A;
+
+        FILE* dumpedSettingsFile;
+        if (fopen_s(&dumpedSettingsFile, "croskbsettings-wilco.bin", "wb") == 0) {
+            fwrite(wilcoCfgs, 1, cfgSizeWilco, dumpedSettingsFile);
+            fclose(dumpedSettingsFile);
+
+            DbgPrint("Wrote wilco settings to croskbsettings-wilco.bin!\n");
+        }
+        else {
+            DbgPrint("Warning: Failed to write settings for croskeyboard4 (wilco)! Check that your permissions are correct!");
+        }
+
+        free(wilcoCfgs);
+    }
+
 
     size_t cfgSize = offsetof(RemapCfgs, cfg) + sizeof(RemapCfg) * 40;
 

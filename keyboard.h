@@ -90,6 +90,13 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define VIVALDI_PREV_TRACK          0x10
 #define VIVALDI_MICMUTE             0x1b
 
+//Wilco uses slightly different keys. Just here for reference as it has a dedicated Fn key
+#define WILCO_FULLSCREEN 0x55
+#define WILCO_OVERVIEW 0x56
+#define WILCO_BRIGHTNESSDN 0x15
+#define WILCO_BRIGHTNESSUP 0x11
+#define WILCO_PROJECT 0xb
+
 #define CROSKBHID_BRIGHTNESS_UP 0x01
 #define CROSKBHID_BRIGHTNESS_DN 0x02
 #define CROSKBHID_KBLT_UP       0x04
