@@ -317,7 +317,7 @@ VivaldiTester::VivaldiTester() {
     }
 
 
-    size_t cfgSize = offsetof(RemapCfgs, cfg) + sizeof(RemapCfg) * 40;
+    size_t cfgSize = offsetof(RemapCfgs, cfg) + sizeof(RemapCfg) * 41;
 
     if (offsetof(RemapCfgs, cfg) != 17) {
         DbgPrint("Warning: RemapCfgs prefix size is incorrect. Your settings file may not work in croskeyboard4!\n");
@@ -335,7 +335,7 @@ VivaldiTester::VivaldiTester() {
     remapCfgs->FlipSearchAndAssistantOnPixelbook = TRUE;
     remapCfgs->HasAssistantKey = RemapCfgOverrideAutoDetect;
     remapCfgs->IsNonChromeEC = RemapCfgOverrideAutoDetect;
-    remapCfgs->remappings = 40;
+    remapCfgs->remappings = 41;
 
     //Begin map vivalid keys (without Ctrl) to F# keys
 
@@ -647,6 +647,15 @@ VivaldiTester::VivaldiTester() {
     remapCfgs->cfg[39].originalKey.MakeCode = K_LOCK;
     remapCfgs->cfg[39].originalKey.Flags = 0;
     remapCfgs->cfg[39].remappedKey.MakeCode = 0x26;
+
+    //Alt + Delete -> Numlock
+    remapCfgs->cfg[40].LeftAlt = RemapCfgKeyStateEnforce;
+    remapCfgs->cfg[40].originalKey.MakeCode = K_DELETE;
+    remapCfgs->cfg[40].originalKey.Flags = KEY_E0;
+    remapCfgs->cfg[40].remappedKey.MakeCode = K_NUMLCK;
+    remapCfgs->cfg[40].remappedKey.Flags = 0;
+    remapCfgs->cfg[40].additionalKeys[0].MakeCode = K_LALT;
+    remapCfgs->cfg[40].additionalKeys[0].Flags = KEY_BREAK;
 
     filterExt->remapCfgs = remapCfgs;
 

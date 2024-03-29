@@ -67,6 +67,8 @@ typedef struct _KEYBOARD_INPUT_DATA {
 #define K_END       0x4F
 #define K_PGDN      0x51
 
+#define K_NUMLCK    0x45
+
 //ALL VIVALDI USES KEY_E0
 
 //values from https://github.com/coreboot/chrome-ec/blob/1b359bdd91da15ea25aaffd0d940ff63b9d72bc5/include/keyboard_8042_sharedlib.h#L116
